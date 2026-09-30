@@ -9,19 +9,19 @@ const FORMATS: { id: Format; icon: IconName; label: string; desc: string; needs:
   {
     id: 'video', icon: 'video', label: 'Vidéo interactive',
     desc: 'La vidéo se met en pause pour poser vos questions au bon moment.',
-    needs: 'Nécessite une seule vidéo, sans autre fichier.',
+    needs: '.mp4',
     ok: s => s.length === 1 && isVideo(s[0]),
   },
   {
     id: 'slides', icon: 'slides', label: 'Présentation',
-    desc: 'Une diapo par page ou par diapo PowerPoint. Les activités s’ajoutent sur les diapos.',
-    needs: 'Nécessite un PowerPoint, un PDF ou des images (sans vidéo).',
+    desc: 'PowerPoint, PDF ou images',
+    needs: 'Powerpoint, PDF ou images',
     ok: s => s.length > 0 && !s.some(isVideo),
   },
   {
     id: 'book', icon: 'book', label: 'Livre interactif',
-    desc: 'Un chapitre par page ou par diapo, à lire en défilant. Les activités se placent entre les contenus.',
-    needs: 'Nécessite un PowerPoint, un PDF ou des images (sans vidéo).',
+    desc: 'PowerPoint, PDF ou images',
+    needs: 'PowerPoint, PDF ou images',
     ok: s => s.length > 0 && !s.some(isVideo),
   },
 ]
@@ -154,7 +154,6 @@ export function Create({ initial, onBack, onCreated }: Props) {
           <fieldset className="plain" disabled={busy}>
             <section className="step" aria-labelledby="step1">
               <h2 id="step1"><span className="num">Étape 1</span> Ajoutez vos supports</h2>
-              <p className="help">Vidéo (.mp4, .webm), PowerPoint (.pptx), PDF ou images. Vous pouvez en mettre plusieurs.</p>
               <DropZone id="add-files" accept={ACCEPT} multiple onFiles={addFiles} label={sources.length ? 'Ajouter d’autres fichiers' : 'Choisir mes fichiers'} />
               <p role="status" className="status">{notice}</p>
 
@@ -223,7 +222,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
             </fieldset>
 
             <section className="step" aria-labelledby="step3">
-              <h2 id="step3"><span className="num">Étape 3</span> Donnez-lui un titre</h2>
+              <h2 id="step3"><span className="num">Étape 3</span> Titre</h2>
               <div className="field">
                 <label htmlFor="title">Titre vu par les élèves</label>
                 <input id="title" ref={titleInput} value={title ?? suggestTitle(sources[0])} onChange={e => setTitle(e.target.value)} placeholder="Ex. : La photosynthèse" aria-invalid={error !== '' && !finalTitle} />
