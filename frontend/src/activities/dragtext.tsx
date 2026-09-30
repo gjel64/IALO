@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import type { ActivityType } from './types'
 import { BLANK, Checker, mark } from './play'
-import { EditableHtml, WordText, answerOf, toText } from './ui'
+import { EditableHtml, WordText, answerOf, toHtml, toText } from './ui'
 
 interface P { taskDescription: string; textField: string }
 
 export const dragText: ActivityType<P> = {
   machineName: 'H5P.DragText', version: '1.10', label: 'Glisser les mots', icon: 'drag',
   create: () => ({ taskDescription: '<p>Glissez les mots au bon endroit.</p>', textField: '' }),
+  fromAI: d => ({ taskDescription: toHtml(d.instruction), textField: d.text }),
   Edit: ({ p, set }) => (
     <>
       <EditableHtml className="question" value={p.taskDescription} onChange={taskDescription => set({ ...p, taskDescription })} placeholder="Consigne…" />

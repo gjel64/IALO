@@ -19,6 +19,7 @@ export interface Ctl {
   edit(fn: (content: any) => void): void // change the container itself (e.g. a chapter title)
   insertSlot(at: number): void
   removeSlot(at: number): void
+  generate?(id: string): Promise<void> // fills an activity with AI content; undefined where AI isn't available
 }
 
 export interface ViewProps { content: any; items: Item[]; files: Record<string, string>; ctl: Ctl; preview: boolean }

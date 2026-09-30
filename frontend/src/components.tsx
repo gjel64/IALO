@@ -37,15 +37,27 @@ export const parseTime = (v: string) => v.split(':').reduce((acc, n) => acc * 60
 // An activity as the student sees it, editable in place, with a small toolbar.
 export function ActivityCard({ item, ctl, tools, preview }: { item: Item; ctl: Ctl; tools?: ReactNode; preview?: boolean }) {
   const t = activityOf(item.action.library)!
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   if (preview) return <div className="activity play"><t.Play p={item.action.params} /></div>
+
+  async function generate() {
+    if (JSON.stringify(item.action.params) !== JSON.stringify(t.create()) && !confirm('Remplacer le contenu de cette activité par une proposition de l’IA ?')) return
+    setBusy(true); setError('')
+    try { await ctl.generate!(item.id) } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
+  }
+
   return (
     <div className={item.id === ctl.selected ? 'activity selected' : 'activity'} onClick={() => ctl.select(item.id)} onFocus={() => item.id !== ctl.selected && ctl.select(item.id)}>
       <div className="bar">
         <span className="kind"><Icon name={t.icon} size={14} /> {t.label}</span>
         {tools}
+        {ctl.generate && t.fromAI && <button title="Remplir avec l’IA" aria-label={`Remplir l’activité ${t.label} avec l’IA`} className="icon-btn" disabled={busy} onClick={generate}><Icon name="sparkle" size={14} /></button>}
         <button title="Dupliquer" aria-label={`Dupliquer l’activité ${t.label}`} className="icon-btn" onClick={() => ctl.add(t, item.pos, structuredClone(item.action.params))}><Icon name="copy" size={14} /></button>
         <button title="Supprimer" aria-label={`Supprimer l’activité ${t.label}`} className="icon-btn" onClick={() => ctl.remove(item.id)}><Icon name="trash" size={14} /></button>
       </div>
+      <p role="status" className="ai-status">{busy && <><progress aria-label="Génération en cours" /> L’IA rédige l’activité…</>}</p>
+      <p role="alert" className="error">{error}</p>
       <t.Edit p={item.action.params} set={params => ctl.update(item.id, { action: { ...item.action, params } })} />
     </div>
   )

@@ -1,5 +1,21 @@
 services:
-  editor:
-    build: .
+  frontend:
+    build: ./frontend
     ports:
       - "5173:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      EVA_BASE_URL: ${EVA_BASE_URL}
+      EVA_MODEL: ${EVA_MODEL:-qwen3.5-9b-q5_k_m}
+    secrets:
+      - eva_api_key
+
+secrets:
+  eva_api_key:
+    environment: EVA_API_KEY

@@ -2,13 +2,14 @@ import { useId, useState } from 'react'
 import type { ActivityType } from './types'
 import { Icon } from '../icons'
 import { Checker, mark } from './play'
-import { EditableHtml, toText } from './ui'
+import { EditableHtml, toHtml, toText } from './ui'
 
 interface P { question: string; correct: 'true' | 'false' }
 
 export const trueFalse: ActivityType<P> = {
   machineName: 'H5P.TrueFalse', version: '1.8', label: 'Vrai / Faux', icon: 'toggle',
   create: () => ({ question: '', correct: 'true' }),
+  fromAI: d => ({ question: toHtml(d.statement), correct: d.correct ? 'true' : 'false' }),
   Edit: ({ p, set }) => (
     <>
       <EditableHtml className="question" value={p.question} onChange={question => set({ ...p, question })} placeholder="Écrivez l'affirmation…" />

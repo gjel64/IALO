@@ -226,3 +226,13 @@ input.gap { width: auto; min-height: 28px; padding: 0 6px; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
 .pager span { color: var(--muted); font-variant-numeric: tabular-nums; }
 .overlay > div > button.primary { margin-top: 4px; }
+
+/* AI generation */
+.ai-panel { background: var(--accent-soft); border-bottom-color: #d5dff4; }
+.ai-panel .notice-icon { background: var(--accent); }
+.ai-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 10px; }
+.ai-fields .field input[type="number"] { width: 90px; }
+.ai-fields .grow { flex: 1; min-width: 220px; }
+.ai-status { display: flex; align-items: center; gap: 10px; margin: 8px 0 0; color: var(--muted); }
+.ai-status:empty { display: none; }
+.activity .ai-status { margin: 0 0 10px; }

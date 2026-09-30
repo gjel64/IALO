@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react'
+import { activityOf } from './activities'
+import type { ActivityType } from './activities/types'
+import { generateActivity, sections, type Generated } from './ai/api'
+import { GenerateCourse } from './ai/GenerateCourse'
 import { Heading } from './components'
 import { containers } from './containers'
 import { read, write } from './containers/model'
@@ -19,7 +23,9 @@ export default function App() {
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [preview, setPreview] = useState(false) // student view: activities answerable, editing tools hidden
+  const [generating, setGenerating] = useState(false) // AI panel open
   const container = pkg && containers[pkg.meta.mainLibrary]
+  const ai = pkg?.meta.mainLibrary !== 'H5P.InteractiveVideo' // a video has no text for the AI to read
 
   // A file dropped next to a drop zone must not make the browser leave the app.
   useEffect(() => {
@@ -40,7 +46,7 @@ export default function App() {
     const c = containers[p.meta.mainLibrary]
     if (!c) throw new Error(`Ce type de contenu n’est pas pris en charge (${p.meta.mainLibrary}). Types acceptés : vidéo interactive, présentation, livre interactif.`)
     setPkg(p); setName(fileName); setItems(read(c, p.content)); setSelected(undefined)
-    setDirty(!!created); setWelcome(created); setPreview(false); setStatus(''); setError(''); setCreating(undefined)
+    setDirty(!!created); setWelcome(created); setPreview(false); setGenerating(false); setStatus(''); setError(''); setCreating(undefined)
   }
 
   async function open(file: File) {
@@ -62,14 +68,26 @@ export default function App() {
   }
 
   const change = (f: (prev: Item[]) => Item[]) => { setItems(f); setDirty(true); setStatus('') }
+  const newItem = (type: ActivityType, pos: number, params: any): Item => {
+    const id = crypto.randomUUID()
+    const library = `${type.machineName} ${pkg!.versions[type.machineName] ?? type.version}`
+    return { id, pos, action: { library, params, subContentId: id, metadata: { contentType: type.label, license: 'U', title: type.label } } }
+  }
+
+  function addGenerated(generated: Generated[]) {
+    const added = generated.flatMap(g => { const t = activityOf(g.type); return t?.fromAI ? [newItem(t, g.section, t.fromAI(g.data))] : [] })
+    change(prev => [...prev, ...added])
+    setGenerating(false); setWelcome(undefined)
+    setStatus(`${added.length} activité${added.length > 1 ? 's ajoutées' : ' ajoutée'} par l’IA : relisez-les avant d’enregistrer`)
+  }
+
   const ctl: Ctl = {
     selected,
     select: setSelected,
     add(type, pos, params = type.create()) {
-      const id = crypto.randomUUID()
-      const library = `${type.machineName} ${pkg!.versions[type.machineName] ?? type.version}`
-      change(prev => [...prev, { id, pos, action: { library, params, subContentId: id, metadata: { contentType: type.label, license: 'U', title: type.label } } }])
-      setSelected(id)
+      const item = newItem(type, pos, params)
+      change(prev => [...prev, item])
+      setSelected(item.id)
     },
     update: (id, patch) => change(prev => prev.map(i => (i.id === id ? { ...i, ...patch } : i))),
     remove: id => change(prev => prev.filter(i => i.id !== id)),
@@ -83,6 +101,12 @@ export default function App() {
       container!.slotList!(pkg!.content).splice(at, 1)
       change(prev => prev.map(i => (i.pos > at ? { ...i, pos: i.pos - 1 } : i)))
     },
+    generate: ai ? async id => {
+      const it = items.find(i => i.id === id)!
+      const t = activityOf(it.action.library)!
+      const data = await generateActivity({ type: t.machineName, title: pkg!.meta.title, section: sections(container!, pkg!.content)[container!.slot(it.pos)] })
+      change(prev => prev.map(i => (i.id === id ? { ...i, action: { ...i.action, params: t.fromAI!(data) } } : i)))
+    } : undefined,
   }
 
   if (creating) return <Create initial={creating} onBack={() => setCreating(undefined)} onCreated={(p, fileName, warnings) => edit(p, fileName, warnings)} />
@@ -101,6 +125,7 @@ export default function App() {
           ))}
         </div>
         <span role="status" className="saved">{status}</span>
+        {ai && !preview && <button onClick={() => setGenerating(true)} aria-expanded={generating}><Icon name="sparkle" /> Générer avec l’IA</button>}
         <button className="primary" onClick={exportFile}><Icon name="download" /> Enregistrer le .h5p</button>
       </header>
       {preview && (
@@ -110,7 +135,10 @@ export default function App() {
           <button className="ghost" onClick={() => setPreview(false)}>Revenir à l’édition</button>
         </div>
       )}
-      {welcome && !preview && (
+      {generating && !preview && (
+        <GenerateCourse title={pkg.meta.title} sections={sections(container, pkg.content)} onDone={addGenerated} onClose={() => setGenerating(false)} />
+      )}
+      {welcome && !preview && !generating && (
         <div className="notice">
           <span className="notice-icon"><Icon name="check" /></span>
           <div>

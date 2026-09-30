@@ -9,4 +9,5 @@ export interface ActivityType<P = any> {
   create(): P
   Edit: FC<{ p: P; set: (p: P) => void }> // student view, editable in place
   Play: FC<{ p: P }> // student view, answerable, for the preview
+  fromAI?(data: any): P // params from the API's generated activity (backend/main.py); omit to disable AI generation
 }

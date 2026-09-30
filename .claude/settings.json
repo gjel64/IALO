@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Edit(./.env)",
+      "Bash(*.env)",
+      "Bash(*.env *)",
+      "Bash(*EVA_API_KEY*)",
+      "Bash(*printenv*)"
+    ]
+  }
+}

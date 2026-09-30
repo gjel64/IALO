@@ -8,6 +8,7 @@ interface P { text: string; questions: string[] }
 export const blanks: ActivityType<P> = {
   machineName: 'H5P.Blanks', version: '1.14', label: 'Texte à trous', icon: 'blanks',
   create: () => ({ text: '<p>Complétez le texte.</p>', questions: [] }),
+  fromAI: d => ({ text: toHtml(d.instruction), questions: d.text.split('\n').filter((l: string) => l.trim()).map(toHtml) }),
   Edit: ({ p, set }) => (
     <>
       <EditableHtml className="question" value={p.text} onChange={text => set({ ...p, text })} placeholder="Consigne…" />

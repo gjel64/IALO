@@ -10,6 +10,7 @@ interface P { question: string; answers: Answer[] }
 export const multiChoice: ActivityType<P> = {
   machineName: 'H5P.MultiChoice', version: '1.16', label: 'QCM', icon: 'list',
   create: () => ({ question: '', answers: [{ text: '', correct: true }, { text: '', correct: false }] }),
+  fromAI: d => ({ question: toHtml(d.question), answers: d.answers.map((a: Answer) => ({ text: toHtml(a.text), correct: a.correct })) }),
   Edit: ({ p, set }) => {
     const answer = (i: number, a: Partial<Answer>) => set({ ...p, answers: p.answers.map((x, j) => (j === i ? { ...x, ...a } : x)) })
     return (
