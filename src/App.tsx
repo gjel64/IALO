@@ -1,0 +1,110 @@
+import { useEffect, useState } from 'react'
+import { Heading } from './components'
+import { containers } from './containers'
+import { read, write } from './containers/model'
+import type { Ctl, Item } from './containers/types'
+import { Create } from './create/Create'
+import { load, save, type H5PPackage } from './h5p/package'
+import { Home } from './Home'
+
+export default function App() {
+  const [creating, setCreating] = useState<File[]>() // set while on the "create from sources" screen
+  const [pkg, setPkg] = useState<H5PPackage>()
+  const [name, setName] = useState('')
+  const [items, setItems] = useState<Item[]>([])
+  const [selected, setSelected] = useState<string>()
+  const [dirty, setDirty] = useState(false)
+  const [welcome, setWelcome] = useState<string[]>() // shown once a content has just been created
+  const [status, setStatus] = useState('')
+  const [error, setError] = useState('')
+  const container = pkg && containers[pkg.meta.mainLibrary]
+
+  // A file dropped next to a drop zone must not make the browser leave the app.
+  useEffect(() => {
+    const stop = (e: DragEvent) => e.preventDefault()
+    addEventListener('dragover', stop)
+    addEventListener('drop', stop)
+    return () => { removeEventListener('dragover', stop); removeEventListener('drop', stop) }
+  }, [])
+
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    addEventListener('beforeunload', warn)
+    return () => removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  function edit(p: H5PPackage, fileName: string, created?: string[]) {
+    const c = containers[p.meta.mainLibrary]
+    if (!c) throw new Error(`Ce type de contenu n’est pas pris en charge (${p.meta.mainLibrary}). Types acceptés : vidéo interactive, présentation, livre interactif.`)
+    setPkg(p); setName(fileName); setItems(read(c, p.content)); setSelected(undefined)
+    setDirty(!!created); setWelcome(created); setStatus(''); setError(''); setCreating(undefined)
+  }
+
+  async function open(file: File) {
+    let p: H5PPackage
+    try { p = await load(file) } catch { return setError(`« ${file.name} » n’est pas un fichier .h5p valide.`) }
+    try { edit(p, file.name) } catch (e) { setError((e as Error).message) }
+  }
+
+  function home() {
+    if (dirty && !confirm('Vos modifications ne sont pas enregistrées. Quitter quand même ?')) return
+    setPkg(undefined); setDirty(false)
+  }
+
+  async function exportFile() {
+    const blob = await save(pkg!, write(container!, pkg!.content, items), [...new Set(items.map(i => i.action.library))])
+    Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name }).click()
+    setDirty(false)
+    setStatus(`✓ « ${name} » enregistré dans vos téléchargements`)
+  }
+
+  const change = (f: (prev: Item[]) => Item[]) => { setItems(f); setDirty(true); setStatus('') }
+  const ctl: Ctl = {
+    selected,
+    select: setSelected,
+    add(type, pos, params = type.create()) {
+      const id = crypto.randomUUID()
+      const library = `${type.machineName} ${pkg!.versions[type.machineName] ?? type.version}`
+      change(prev => [...prev, { id, pos, action: { library, params, subContentId: id, metadata: { contentType: type.label, license: 'U', title: type.label } } }])
+      setSelected(id)
+    },
+    update: (id, patch) => change(prev => prev.map(i => (i.id === id ? { ...i, ...patch } : i))),
+    remove: id => change(prev => prev.filter(i => i.id !== id)),
+    // Slides / chapters live in the content itself; activities keep pointing at their original wrapper, so it is mutated in place.
+    edit(fn) { fn(pkg!.content); setPkg({ ...pkg! }); setDirty(true); setStatus('') },
+    insertSlot(at) {
+      container!.slotList!(pkg!.content).splice(at, 0, container!.newSlot!(pkg!.content))
+      change(prev => prev.map(i => (i.pos >= at ? { ...i, pos: i.pos + 1 } : i)))
+    },
+    removeSlot(at) {
+      container!.slotList!(pkg!.content).splice(at, 1)
+      change(prev => prev.map(i => (i.pos > at ? { ...i, pos: i.pos - 1 } : i)))
+    },
+  }
+
+  if (creating) return <Create initial={creating} onBack={() => setCreating(undefined)} onCreated={(p, fileName, warnings) => edit(p, fileName, warnings)} />
+
+  if (!pkg || !container) return <Home error={error} onOpen={open} onCreate={files => { setError(''); setCreating(files) }} />
+
+  return (
+    <div className="app">
+      <header>
+        <button className="ghost" onClick={home}>← Accueil</button>
+        <Heading title={pkg.meta.title} className="doc-title">{pkg.meta.title} <small>{container.label}</small></Heading>
+        <span role="status" className="saved">{status}</span>
+        <button className="primary" onClick={exportFile}>⬇ Enregistrer le .h5p</button>
+      </header>
+      {welcome && (
+        <div className="notice">
+          <div>
+            <b>✓ Votre contenu est prêt.</b> {container.hint}
+            {welcome.length > 0 && <ul>{welcome.map((w, k) => <li key={k}>{w}</li>)}</ul>}
+          </div>
+          <button className="ghost" onClick={() => setWelcome(undefined)}>Compris</button>
+        </div>
+      )}
+      <main><container.View content={pkg.content} items={items} files={pkg.files} ctl={ctl} /></main>
+    </div>
+  )
+}
