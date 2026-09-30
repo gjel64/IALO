@@ -6,6 +6,7 @@ import type { Ctl, Item } from './containers/types'
 import { Create } from './create/Create'
 import { load, save, type H5PPackage } from './h5p/package'
 import { Home } from './Home'
+import { Icon } from './icons'
 
 export default function App() {
   const [creating, setCreating] = useState<File[]>() // set while on the "create from sources" screen
@@ -17,6 +18,7 @@ export default function App() {
   const [welcome, setWelcome] = useState<string[]>() // shown once a content has just been created
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const [preview, setPreview] = useState(false) // student view: activities answerable, editing tools hidden
   const container = pkg && containers[pkg.meta.mainLibrary]
 
   // A file dropped next to a drop zone must not make the browser leave the app.
@@ -38,7 +40,7 @@ export default function App() {
     const c = containers[p.meta.mainLibrary]
     if (!c) throw new Error(`Ce type de contenu n’est pas pris en charge (${p.meta.mainLibrary}). Types acceptés : vidéo interactive, présentation, livre interactif.`)
     setPkg(p); setName(fileName); setItems(read(c, p.content)); setSelected(undefined)
-    setDirty(!!created); setWelcome(created); setStatus(''); setError(''); setCreating(undefined)
+    setDirty(!!created); setWelcome(created); setPreview(false); setStatus(''); setError(''); setCreating(undefined)
   }
 
   async function open(file: File) {
@@ -56,7 +58,7 @@ export default function App() {
     const blob = await save(pkg!, write(container!, pkg!.content, items), [...new Set(items.map(i => i.action.library))])
     Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name }).click()
     setDirty(false)
-    setStatus(`✓ « ${name} » enregistré dans vos téléchargements`)
+    setStatus(`« ${name} » enregistré dans vos téléchargements`)
   }
 
   const change = (f: (prev: Item[]) => Item[]) => { setItems(f); setDirty(true); setStatus('') }
@@ -90,21 +92,35 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <button className="ghost" onClick={home}>← Accueil</button>
+        <button className="ghost" onClick={home}><Icon name="back" /> Accueil</button>
+        <span className="divider" aria-hidden="true" />
         <Heading title={pkg.meta.title} className="doc-title">{pkg.meta.title} <small>{container.label}</small></Heading>
+        <div className="segmented" role="group" aria-label="Affichage">
+          {([[false, 'edit', 'Édition'], [true, 'eye', 'Vue élève']] as const).map(([on, icon, label]) => (
+            <button key={label} aria-pressed={preview === on} onClick={() => { setPreview(on); setSelected(undefined) }}><Icon name={icon} /> {label}</button>
+          ))}
+        </div>
         <span role="status" className="saved">{status}</span>
-        <button className="primary" onClick={exportFile}>⬇ Enregistrer le .h5p</button>
+        <button className="primary" onClick={exportFile}><Icon name="download" /> Enregistrer le .h5p</button>
       </header>
-      {welcome && (
+      {preview && (
+        <div className="notice preview-notice">
+          <span className="notice-icon"><Icon name="eye" /></span>
+          <div><b>Vue élève.</b> Testez le contenu comme vos élèves le verront. Les réponses données ici ne sont pas enregistrées.</div>
+          <button className="ghost" onClick={() => setPreview(false)}>Revenir à l’édition</button>
+        </div>
+      )}
+      {welcome && !preview && (
         <div className="notice">
+          <span className="notice-icon"><Icon name="check" /></span>
           <div>
-            <b>✓ Votre contenu est prêt.</b> {container.hint}
+            <b>Votre contenu est prêt.</b> {container.hint}
             {welcome.length > 0 && <ul>{welcome.map((w, k) => <li key={k}>{w}</li>)}</ul>}
           </div>
           <button className="ghost" onClick={() => setWelcome(undefined)}>Compris</button>
         </div>
       )}
-      <main><container.View content={pkg.content} items={items} files={pkg.files} ctl={ctl} /></main>
+      <main><container.View content={pkg.content} items={items} files={pkg.files} ctl={ctl} preview={preview} /></main>
     </div>
   )
 }

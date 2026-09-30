@@ -1,24 +1,25 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { DropZone, Heading } from '../components'
 import type { H5PPackage } from '../h5p/package'
+import { Icon, type IconName } from '../icons'
 import { build, type Format } from './build'
 import { ACCEPT, baseName, isVideo, isYouTube, kindOf, type Kind, type Source } from './sources'
 
-const FORMATS: { id: Format; icon: string; label: string; desc: string; needs: string; ok: (s: Source[]) => boolean }[] = [
+const FORMATS: { id: Format; icon: IconName; label: string; desc: string; needs: string; ok: (s: Source[]) => boolean }[] = [
   {
-    id: 'video', icon: '🎬', label: 'Vidéo interactive',
+    id: 'video', icon: 'video', label: 'Vidéo interactive',
     desc: 'La vidéo se met en pause pour poser vos questions au bon moment.',
     needs: 'Nécessite une seule vidéo, sans autre fichier.',
     ok: s => s.length === 1 && isVideo(s[0]),
   },
   {
-    id: 'slides', icon: '🖼️', label: 'Présentation',
+    id: 'slides', icon: 'slides', label: 'Présentation',
     desc: 'Une diapo par page ou par diapo PowerPoint. Les activités s’ajoutent sur les diapos.',
     needs: 'Nécessite un PowerPoint, un PDF ou des images (sans vidéo).',
     ok: s => s.length > 0 && !s.some(isVideo),
   },
   {
-    id: 'book', icon: '📖', label: 'Livre interactif',
+    id: 'book', icon: 'book', label: 'Livre interactif',
     desc: 'Un chapitre par page ou par diapo, à lire en défilant. Les activités se placent entre les contenus.',
     needs: 'Nécessite un PowerPoint, un PDF ou des images (sans vidéo).',
     ok: s => s.length > 0 && !s.some(isVideo),
@@ -28,8 +29,8 @@ const FORMATS: { id: Format; icon: string; label: string; desc: string; needs: s
 const recommend = (s: Source[]): Format | undefined =>
   !s.length ? undefined : s.some(isVideo) ? (s.length === 1 ? 'video' : undefined) : s.every(x => x.kind === 'pdf') ? 'book' : 'slides'
 
-const KIND: Record<Kind, [string, string]> = {
-  video: ['🎬', 'Vidéo'], youtube: ['▶️', 'Vidéo YouTube'], pdf: ['📄', 'PDF'], pptx: ['📊', 'PowerPoint'], image: ['🖼️', 'Image'],
+const KIND: Record<Kind, [IconName, string]> = {
+  video: ['video', 'Vidéo'], youtube: ['play', 'Vidéo YouTube'], pdf: ['pdf', 'PDF'], pptx: ['slides', 'PowerPoint'], image: ['image', 'Image'],
 }
 
 // Unsupported files get a hint on how to make them usable.
@@ -141,8 +142,9 @@ export function Create({ initial, onBack, onCreated }: Props) {
   return (
     <div className="app">
       <header>
-        <button className="ghost" onClick={onBack} disabled={busy}>← Accueil</button>
-        <b>IALO</b>
+        <button className="ghost" onClick={onBack} disabled={busy}><Icon name="back" /> Accueil</button>
+        <span className="divider" aria-hidden="true" />
+        <span className="brand">IALO</span>
       </header>
       <main>
         <form className="create" onSubmit={submit} aria-busy={busy} noValidate>
@@ -151,7 +153,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
 
           <fieldset className="plain" disabled={busy}>
             <section className="step" aria-labelledby="step1">
-              <h2 id="step1"><span className="num" aria-hidden="true">1</span> Ajoutez vos supports</h2>
+              <h2 id="step1"><span className="num">Étape 1</span> Ajoutez vos supports</h2>
               <p className="help">Vidéo (.mp4, .webm), PowerPoint (.pptx), PDF ou images. Vous pouvez en mettre plusieurs.</p>
               <DropZone id="add-files" accept={ACCEPT} multiple onFiles={addFiles} label={sources.length ? 'Ajouter d’autres fichiers' : 'Choisir mes fichiers'} />
               <p role="status" className="status">{notice}</p>
@@ -177,7 +179,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
                   <ol className="sources" aria-labelledby="list-title">
                     {sources.map((s, i) => (
                       <li key={s.id}>
-                        <span className="icon" aria-hidden="true">{KIND[s.kind][0]}</span>
+                        <span className="icon"><Icon name={KIND[s.kind][0]} size={18} /></span>
                         <div className="meta">
                           <b>{s.name}</b>
                           <small>{KIND[s.kind][1]}{s.file && ` · ${size(s.file.size)}`}</small>
@@ -190,8 +192,8 @@ export function Create({ initial, onBack, onCreated }: Props) {
                         </div>
                         {sources.length > 1 && (
                           <>
-                            <button type="button" id={`${s.id}-up`} className="icon-btn" aria-label={`Monter « ${s.name} »`} aria-disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
-                            <button type="button" id={`${s.id}-down`} className="icon-btn" aria-label={`Descendre « ${s.name} »`} aria-disabled={i === sources.length - 1} onClick={() => move(i, 1)}>↓</button>
+                            <button type="button" id={`${s.id}-up`} className="icon-btn" aria-label={`Monter « ${s.name} »`} aria-disabled={i === 0} onClick={() => move(i, -1)}><Icon name="up" /></button>
+                            <button type="button" id={`${s.id}-down`} className="icon-btn" aria-label={`Descendre « ${s.name} »`} aria-disabled={i === sources.length - 1} onClick={() => move(i, 1)}><Icon name="down" /></button>
                           </>
                         )}
                         <button type="button" id={`${s.id}-remove`} onClick={() => remove(i)} aria-label={`Retirer « ${s.name} »`}>Retirer</button>
@@ -203,7 +205,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
             </section>
 
             <fieldset className="step formats">
-              <legend><h2><span className="num" aria-hidden="true">2</span> Choisissez le format</h2></legend>
+              <legend><h2><span className="num">Étape 2</span> Choisissez le format</h2></legend>
               {sources.length > 0 && !recommended && <p className="help warn">{FORMATS[0].needs} Pour une présentation ou un livre, retirez la vidéo.</p>}
               <div className="format-list">
                 {FORMATS.map(f => {
@@ -211,7 +213,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
                   return (
                     <label key={f.id} className="format">
                       <input type="radio" name="format" value={f.id} checked={format === f.id} disabled={!ok} onChange={() => setChosen(f.id)} aria-describedby={`${f.id}-desc`} />
-                      <span className="icon" aria-hidden="true">{f.icon}</span>
+                      <span className="icon"><Icon name={f.icon} size={22} /></span>
                       <b>{f.label}{recommended === f.id && <span className="badge">Recommandé</span>}</b>
                       <small id={`${f.id}-desc`}>{ok ? f.desc : f.needs}</small>
                     </label>
@@ -221,7 +223,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
             </fieldset>
 
             <section className="step" aria-labelledby="step3">
-              <h2 id="step3"><span className="num" aria-hidden="true">3</span> Donnez-lui un titre</h2>
+              <h2 id="step3"><span className="num">Étape 3</span> Donnez-lui un titre</h2>
               <div className="field">
                 <label htmlFor="title">Titre vu par les élèves</label>
                 <input id="title" ref={titleInput} value={title ?? suggestTitle(sources[0])} onChange={e => setTitle(e.target.value)} placeholder="Ex. : La photosynthèse" aria-invalid={error !== '' && !finalTitle} />
@@ -236,7 +238,7 @@ export function Create({ initial, onBack, onCreated }: Props) {
 
           <div className="actions">
             <button type="submit" className="primary big" disabled={busy}>
-              {busy ? 'Création en cours…' : 'Créer et ajouter des activités →'}
+              {busy ? 'Création en cours…' : <>Créer et ajouter des activités <Icon name="next" /></>}
             </button>
           </div>
         </form>

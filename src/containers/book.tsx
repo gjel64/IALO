@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Editable } from '../activities/ui'
-import { ActivityCard, AddMenu, Count, MoveTo, Static } from '../components'
+import { ActivityCard, AddMenu, Count, MoveTo, Pager, Static } from '../components'
 import { entries } from './model'
 import type { Container } from './types'
+import { Icon } from '../icons'
 
 export const book: Container = {
   label: 'Livre interactif',
@@ -21,7 +22,7 @@ export const book: Container = {
     metadata: { contentType: 'Column', license: 'U', title: 'Nouveau chapitre' },
   }),
 
-  View: ({ content, items, files, ctl }) => {
+  View: ({ content, items, files, ctl, preview }) => {
     const [i, setI] = useState(0)
     const names = book.slots(content).map((_, k) => book.slotName(content, k))
     const list = entries(book, content, items, i)
@@ -30,21 +31,21 @@ export const book: Container = {
         <nav aria-label="Chapitres">
           {names.map((n, k) => (
             <button key={k} className={k === i ? 'on' : ''} aria-current={k === i || undefined} onClick={() => setI(k)}>
-              {n}<Count n={items.filter(it => it.pos === k).length} />
+              {n}{!preview && <Count n={items.filter(it => it.pos === k).length} />}
             </button>
           ))}
-          <button className="ghost" onClick={() => { ctl.insertSlot(i + 1); setI(i + 1) }}>+ Nouveau chapitre</button>
+          {!preview && <button className="ghost" onClick={() => { ctl.insertSlot(i + 1); setI(i + 1) }}><Icon name="plus" /> Nouveau chapitre</button>}
         </nav>
         <article>
           <h2>
-            <Editable value={names[i]} placeholder="Titre du chapitre" onChange={v => ctl.edit(c => { (c.chapters[i].metadata ??= {}).title = v })} />
+            {preview ? names[i] : <Editable value={names[i]} placeholder="Titre du chapitre" onChange={v => ctl.edit(c => { (c.chapters[i].metadata ??= {}).title = v })} />}
           </h2>
           {list.map((e, k) =>
             e.item
-              ? <ActivityCard key={e.item.id} item={e.item} ctl={ctl} tools={<MoveTo item={e.item} ctl={ctl} names={names} />} />
+              ? <ActivityCard key={e.item.id} item={e.item} ctl={ctl} preview={preview} tools={<MoveTo item={e.item} ctl={ctl} names={names} />} />
               : <Static key={k} action={e.el.content} files={files} />)}
-          <AddMenu onAdd={t => ctl.add(t, i)} />
-          {!list.length && names.length > 1 && (
+          {preview ? <Pager i={i} n={names.length} set={setI} label="Chapitres" /> : <AddMenu onAdd={t => ctl.add(t, i)} />}
+          {!preview && !list.length && names.length > 1 && (
             <button className="link danger" onClick={() => { ctl.removeSlot(i); setI(Math.max(0, i - 1)) }}>Supprimer ce chapitre vide</button>
           )}
         </article>

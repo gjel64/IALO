@@ -41,8 +41,8 @@ export function WordText({ value, onChange }: { value: string; onChange: (v: str
         ? <Editable multiline value={value} onChange={onChange} placeholder="Écrivez le texte, puis cliquez sur « Terminer »…" />
         : <p>{parts.map((t, i) => (i % 2 ? <span key={i} className={t.startsWith('*') ? 'blank' : 'word'} onClick={() => toggle(i)}>{t.startsWith('*') ? answerOf(t) : t}</span> : t))}</p>}
       <small className="hint">
-        {raw ? 'Astuce : entourez un mot d’*astérisques* pour le cacher.' : 'Cliquez sur un mot pour le cacher / le révéler.'}{' '}
-        <button className="link" onClick={() => setRaw(!raw)}>{raw ? '✓ Terminer' : '✎ Modifier le texte'}</button>
+        {raw ? 'entourez un mot d’*astérisques* pour le cacher.' : 'Cliquez sur un mot pour le cacher / le révéler.'}{' '}
+        <button className="link" onClick={() => setRaw(!raw)}>{raw ? 'Terminer' : 'Modifier le texte'}</button>
       </small>
     </div>
   )

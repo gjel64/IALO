@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ActivityCard, AddMenu, Count, MoveTo, Static } from '../components'
+import { ActivityCard, AddMenu, Count, MoveTo, Pager, Static } from '../components'
 import { entries } from './model'
 import type { Container } from './types'
+import { Icon } from '../icons'
 
 export const slides: Container = {
   label: 'Présentation',
@@ -15,33 +16,34 @@ export const slides: Container = {
   slotList: c => c.presentation.slides,
   newSlot: () => ({ elements: [], keywords: [], slideBackgroundSelector: {} }),
 
-  View: ({ content, items, files, ctl }) => {
+  View: ({ content, items, files, ctl, preview }) => {
     const [i, setI] = useState(0)
     const names = slides.slots(content).map((_, k) => slides.slotName(content, k))
     const list = entries(slides, content, items, i)
     return (
       <div className="slides">
-        <nav className="thumbs" aria-label="Diapos">
+        {!preview && <nav className="thumbs" aria-label="Diapos">
           {names.map((n, k) => (
             <button key={k} className={k === i ? 'on' : ''} aria-current={k === i || undefined} onClick={() => setI(k)}>
               {n}<Count n={items.filter(it => it.pos === k).length} />
             </button>
           ))}
-          <button className="ghost" onClick={() => { ctl.insertSlot(i + 1); setI(i + 1) }}>+ Nouvelle diapo</button>
-        </nav>
+          <button className="ghost" onClick={() => { ctl.insertSlot(i + 1); setI(i + 1) }}><Icon name="plus" /> Nouvelle diapo</button>
+        </nav>}
         <div className="slide">
           {list.map((e, k) => {
             const g = e.item ? slides.wrap(e.item.action, i, e.item.el) : e.el
             return (
               <div key={e.item?.id ?? k} className={e.item?.id === ctl.selected ? 'el top' : 'el'} style={{ left: `${g.x}%`, top: `${g.y}%`, width: `${g.width}%`, height: `${g.height}%` }}>
-                {e.item ? <ActivityCard item={e.item} ctl={ctl} tools={<MoveTo item={e.item} ctl={ctl} names={names} />} /> : <Static action={e.el.action} files={files} />}
+                {e.item ? <ActivityCard item={e.item} ctl={ctl} preview={preview} tools={<MoveTo item={e.item} ctl={ctl} names={names} />} /> : <Static action={e.el.action} files={files} />}
               </div>
             )
           })}
-          {!list.length && <p className="empty-slot">Diapo vide : ajoutez une activité ci-dessous.</p>}
+          {!list.length && <p className="empty-slot">{preview ? 'Diapo vide' : 'Diapo vide : ajoutez une activité ci-dessous.'}</p>}
         </div>
-        <AddMenu label={`+ Ajouter sur la ${names[i].toLowerCase()} :`} onAdd={t => ctl.add(t, i)} />
-        {!list.length && names.length > 1 && (
+        {preview && <Pager i={i} n={names.length} set={setI} label="Diapos" />}
+        {!preview && <AddMenu label={`Ajouter sur la ${names[i].toLowerCase()}`} onAdd={t => ctl.add(t, i)} />}
+        {!preview && !list.length && names.length > 1 && (
           <button className="link danger" onClick={() => { ctl.removeSlot(i); setI(Math.max(0, i - 1)) }}>Supprimer cette diapo vide</button>
         )}
       </div>

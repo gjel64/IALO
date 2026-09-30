@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { activities, activityOf } from './activities'
 import type { Ctl, Item } from './containers/types'
+import { Icon } from './icons'
 
 // Page title: names the browser tab and takes focus so screen readers announce the new screen.
 export function Heading({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
@@ -22,8 +23,9 @@ export function DropZone({ id, accept, multiple, label, onFiles }: { id?: string
       onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(false) }}
       onDrop={e => { e.preventDefault(); setOver(false); onFiles([...e.dataTransfer.files]) }}
     >
-      <button id={id} type="button" className="primary big" onClick={() => input.current?.click()}>{label}</button>
-      <span aria-hidden="true">{over ? 'Déposez pour ajouter' : 'ou glissez-déposez ici'}</span>
+      <span className="drop-icon"><Icon name="upload" size={20} /></span>
+      <button id={id} type="button" className="primary" onClick={() => input.current?.click()}>{label}</button>
+      <span aria-hidden="true">{over ? 'Déposez pour ajouter' : 'ou glissez-déposez vos fichiers ici'}</span>
       <input ref={input} type="file" hidden accept={accept} multiple={multiple} onChange={e => { onFiles([...(e.target.files ?? [])]); e.target.value = '' }} />
     </div>
   )
@@ -33,26 +35,36 @@ export const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s %
 export const parseTime = (v: string) => v.split(':').reduce((acc, n) => acc * 60 + Number(n), 0)
 
 // An activity as the student sees it, editable in place, with a small toolbar.
-export function ActivityCard({ item, ctl, tools }: { item: Item; ctl: Ctl; tools?: ReactNode }) {
+export function ActivityCard({ item, ctl, tools, preview }: { item: Item; ctl: Ctl; tools?: ReactNode; preview?: boolean }) {
   const t = activityOf(item.action.library)!
+  if (preview) return <div className="activity play"><t.Play p={item.action.params} /></div>
   return (
     <div className={item.id === ctl.selected ? 'activity selected' : 'activity'} onClick={() => ctl.select(item.id)} onFocus={() => item.id !== ctl.selected && ctl.select(item.id)}>
       <div className="bar">
-        <span><span aria-hidden="true">{t.icon}</span> {t.label}</span>
+        <span className="kind"><Icon name={t.icon} size={14} /> {t.label}</span>
         {tools}
-        <button title="Dupliquer" aria-label={`Dupliquer l’activité ${t.label}`} onClick={() => ctl.add(t, item.pos, structuredClone(item.action.params))}>⧉</button>
-        <button title="Supprimer" aria-label={`Supprimer l’activité ${t.label}`} onClick={() => ctl.remove(item.id)}>🗑</button>
+        <button title="Dupliquer" aria-label={`Dupliquer l’activité ${t.label}`} className="icon-btn" onClick={() => ctl.add(t, item.pos, structuredClone(item.action.params))}><Icon name="copy" size={14} /></button>
+        <button title="Supprimer" aria-label={`Supprimer l’activité ${t.label}`} className="icon-btn" onClick={() => ctl.remove(item.id)}><Icon name="trash" size={14} /></button>
       </div>
       <t.Edit p={item.action.params} set={params => ctl.update(item.id, { action: { ...item.action, params } })} />
     </div>
   )
 }
 
-export const AddMenu = ({ label = '+ Ajouter une activité', onAdd }: { label?: string; onAdd: (t: (typeof activities)[number]) => void }) => (
+export const AddMenu = ({ label = 'Ajouter une activité', onAdd }: { label?: string; onAdd: (t: (typeof activities)[number]) => void }) => (
   <div className="add-menu" role="group" aria-label={label}>
     <span aria-hidden="true">{label}</span>
-    {activities.map(t => <button key={t.machineName} onClick={() => onAdd(t)}><span aria-hidden="true">{t.icon}</span> {t.label}</button>)}
+    {activities.map(t => <button key={t.machineName} onClick={() => onAdd(t)}><Icon name={t.icon} /> {t.label}</button>)}
   </div>
+)
+
+// Previous / next navigation between slides or chapters, as in the student player.
+export const Pager = ({ i, n, set, label }: { i: number; n: number; set: (i: number) => void; label: string }) => (
+  <nav className="pager" aria-label={label}>
+    <button onClick={() => set(i - 1)} disabled={i === 0}><Icon name="prev" /> Précédent</button>
+    <span>{i + 1} / {n}</span>
+    <button onClick={() => set(i + 1)} disabled={i === n - 1}>Suivant <Icon name="forward" /></button>
+  </nav>
 )
 
 // Number of activities in a slide / chapter, spelled out for screen readers.
@@ -61,7 +73,7 @@ export const Count = ({ n }: { n: number }) =>
 
 export const MoveTo = ({ item, ctl, names }: { item: Item; ctl: Ctl; names: string[] }) => (
   <select title="Déplacer" aria-label="Déplacer vers" value={item.pos} onChange={e => ctl.update(item.id, { pos: +e.target.value })}>
-    {names.map((n, i) => <option key={i} value={i}>↪ {n}</option>)}
+    {names.map((n, i) => <option key={i} value={i}>{n}</option>)}
   </select>
 )
 

@@ -21,7 +21,7 @@ export interface Ctl {
   removeSlot(at: number): void
 }
 
-export interface ViewProps { content: any; items: Item[]; files: Record<string, string>; ctl: Ctl }
+export interface ViewProps { content: any; items: Item[]; files: Record<string, string>; ctl: Ctl; preview: boolean }
 
 // A container is an H5P resource (video, presentation, book) holding activities in "slots".
 export interface Container {
